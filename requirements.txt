@@ -1,0 +1,1 @@
+# Use `uv sync` at repo root — all deps are workspace members or PyPI packages.

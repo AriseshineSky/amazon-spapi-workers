@@ -1,0 +1,32 @@
+# Copy to ~/.amazon_spapi/config.ini — never commit real values.
+# Broker: set BROKER_URL in environment (see .env.example).
+
+[spapi]
+lwa_refresh_token = CHANGEME
+lwa_client_id = CHANGEME
+lwa_client_secret = CHANGEME
+aws_access_key = CHANGEME
+aws_secret_key = CHANGEME
+
+[offer_service]
+host = 127.0.0.1
+port = 9200
+user = elastic
+password = CHANGEME
+
+[product_service]
+host = 127.0.0.1
+port = 9200
+user = elastic
+password = CHANGEME
+
+# Optional Telegram alerts (Forbidden / repeated failures)
+[telegram]
+bot_token = CHANGEME
+group_chat_id = CHANGEME
+
+# Optional Sentry
+[sentry]
+dsn =
+traces_sample_rate = 0.5
+profiles_sample_rate = 0.1
