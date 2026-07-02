@@ -1,0 +1,26 @@
+[Unit]
+Description=Amazon SP-API — 报价刷新（队列/并发/名字见 /etc/conf.d/celery_spapi）
+Documentation=file:///home/Admin/src/em-workers/docs/生产部署.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=Admin
+Group=Admin
+WorkingDirectory=/home/Admin/src/em-workers
+EnvironmentFile=/etc/conf.d/celery_spapi
+
+ExecStart=/home/Admin/.local/bin/uv run celery -A amazon_spapi.worker worker \
+  -n ${OFFERS_WORKER_NAME}@%%h \
+  -l ${CELERY_LOG_LEVEL} \
+  -c ${OFFERS_CONCURRENCY} \
+  -Q ${OFFERS_QUEUES}
+
+Restart=always
+RestartSec=15
+KillSignal=SIGTERM
+TimeoutStopSec=120
+
+[Install]
+WantedBy=multi-user.target

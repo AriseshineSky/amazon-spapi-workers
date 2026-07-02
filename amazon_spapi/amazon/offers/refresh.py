@@ -78,15 +78,25 @@ class RefreshMarketplaceOffers:
 
         offers = None
         spapi_start_ms = now_ms()
+        spapi_metrics = {}
         while True:
             try:
                 offers = self.spapi.get_item_offers_batch(
-                    self.marketplace, self.asins, self.condition
+                    self.marketplace,
+                    self.asins,
+                    self.condition,
+                    metrics=spapi_metrics,
                 )
                 break
             except SellingApiForbiddenException as e:
                 raise e
-            except exceptions_to_retry:
+            except exceptions_to_retry as e:
+                from sp_api.base.exceptions import SellingApiRequestThrottledException
+
+                if isinstance(e, SellingApiRequestThrottledException):
+                    spapi_metrics["throttle_count"] = (
+                        spapi_metrics.get("throttle_count", 0) + 1
+                    )
                 time.sleep(3)
             except SellingApiInvalidAsinException:
                 break
@@ -107,6 +117,7 @@ class RefreshMarketplaceOffers:
                     task_duration_ms=task_duration_ms,
                     spapi_duration_ms=spapi_duration_ms,
                     api_failed=1,
+                    throttle_count=spapi_metrics.get("throttle_count", 0),
                     fetch_gap_ms=fetch_gap_ms,
                 )
             return None
@@ -148,6 +159,7 @@ class RefreshMarketplaceOffers:
                 task_duration_ms=task_duration_ms,
                 spapi_duration_ms=spapi_duration_ms,
                 api_failed=0 if saved else 1,
+                throttle_count=spapi_metrics.get("throttle_count", 0),
                 fetch_gap_ms=fetch_gap_ms,
             )
             stats.maybe_flush()

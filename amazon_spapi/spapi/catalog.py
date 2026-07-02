@@ -6,7 +6,11 @@ from __future__ import annotations
 import time
 from typing import List
 
-from sp_api.base.exceptions import SellingApiBadRequestException, SellingApiForbiddenException
+from sp_api.base.exceptions import (
+    SellingApiBadRequestException,
+    SellingApiForbiddenException,
+    SellingApiRequestThrottledException,
+)
 
 from amazon_spapi.spapi.catalog_items import (
     CATALOG_INCLUDED_DATA,
@@ -50,6 +54,7 @@ class CatalogApiClient:
         marketplace="US",
         locale="en_GB",
         search_type="identifiers",
+        metrics=None,
         **kwargs,
     ):
         marketplace = marketplace.upper()
@@ -93,7 +98,9 @@ class CatalogApiClient:
                 if isinstance(e, SellingApiForbiddenException):
                     time.sleep(3)
                 raise
-            except exceptions_to_retry:
+            except exceptions_to_retry as e:
+                if isinstance(e, SellingApiRequestThrottledException) and metrics is not None:
+                    metrics["throttle_count"] = metrics.get("throttle_count", 0) + 1
                 time.sleep(max_retries)
                 max_retries -= 1
                 if max_retries <= 0:

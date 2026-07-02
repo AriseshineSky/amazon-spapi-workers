@@ -17,7 +17,7 @@ from amazon_spapi.worker.worker_deps import WorkerContext
 logger = get_task_logger(__name__)
 
 
-@app.task(base=WorkerContext, bind=True, acks_late=True, rate_limit="8/m")
+@app.task(base=WorkerContext, bind=True, acks_late=True)
 def refresh_offers(
     self,
     marketplace,

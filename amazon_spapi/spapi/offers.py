@@ -6,7 +6,11 @@ from __future__ import annotations
 import time
 from datetime import datetime
 
-from sp_api.base.exceptions import SellingApiBadRequestException, SellingApiForbiddenException
+from sp_api.base.exceptions import (
+    SellingApiBadRequestException,
+    SellingApiForbiddenException,
+    SellingApiRequestThrottledException,
+)
 
 from amazon_spapi.spapi.client import Products, base
 from amazon_spapi.spapi.exceptions import (
@@ -47,6 +51,7 @@ class OffersApiClient:
         asins,
         condition="New",
         add_default_offer=True,
+        metrics=None,
     ):
         marketplace = marketplace.upper()
         marketplace_id = MARKETPLACE_IDS[marketplace]
@@ -92,7 +97,9 @@ class OffersApiClient:
                 if isinstance(e, SellingApiForbiddenException):
                     time.sleep(7)
                 raise
-            except exceptions_to_retry:
+            except exceptions_to_retry as e:
+                if isinstance(e, SellingApiRequestThrottledException) and metrics is not None:
+                    metrics["throttle_count"] = metrics.get("throttle_count", 0) + 1
                 time.sleep(max_retries)
                 max_retries -= 1
                 if max_retries <= 0:

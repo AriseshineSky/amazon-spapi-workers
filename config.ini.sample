@@ -1,5 +1,5 @@
 # Copy to ~/.amazon_spapi/config.ini — never commit real values.
-# Broker: set BROKER_URL in environment (see .env.example).
+# Worker 队列/并发/名字/限速：/etc/conf.d/celery_spapi（见 deploy/conf.d/celery_spapi.example）
 
 [spapi]
 lwa_refresh_token = CHANGEME

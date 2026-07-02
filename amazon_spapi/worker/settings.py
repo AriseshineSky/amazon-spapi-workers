@@ -2,6 +2,7 @@
 """Celery runtime settings (broker, ack policy, priorities)."""
 
 from amazon_spapi.config.env import get_broker_url
+from amazon_spapi.config.workers import get_task_rate_limits
 from amazon_spapi.scheduling.priority import (
     PRIORITY_NORMAL,
     user_to_broker_priority,
@@ -27,3 +28,6 @@ worker_prefetch_multiplier = 1
 
 worker_send_task_events = False
 task_send_sent_event = False
+
+# Per-process task rate limits; see /etc/conf.d/celery_spapi and docs/生产部署.md
+task_annotations = get_task_rate_limits()

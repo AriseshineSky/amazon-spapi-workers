@@ -186,6 +186,55 @@ def check_running_workers(report: Report, timeout: float) -> None:
         report.add("celery_workers", False, str(exc))
 
 
+def _ping_node_names(ping: dict) -> set:
+    return {key.split("@", 1)[0] for key in ping}
+
+
+def check_expected_workers(report: Report, timeout: float) -> None:
+    try:
+        from amazon_spapi.config.workers import load_workers_config_safe
+        from amazon_spapi.worker import app
+
+        workers = load_workers_config_safe()
+        expected = []
+        if workers.has_offers:
+            expected.append(workers.resolved_offers_worker_name())
+        if workers.has_catalog:
+            expected.append(workers.resolved_catalog_worker_name())
+        if not expected:
+            report.add("celery_worker_names", True, "no OFFERS_/CATALOG_ env configured")
+            return
+
+        inspector = app.control.inspect(timeout=timeout)
+        ping = inspector.ping() if inspector else None
+        if not ping:
+            report.add(
+                "celery_worker_names",
+                False,
+                "no worker replied; expected: {}".format(", ".join(expected)),
+            )
+            return
+
+        online = _ping_node_names(ping)
+        missing = sorted(set(expected) - online)
+        if missing:
+            report.add(
+                "celery_worker_names",
+                False,
+                "missing: {} (online: {})".format(
+                    ", ".join(missing), ", ".join(sorted(online))
+                ),
+            )
+        else:
+            report.add(
+                "celery_worker_names",
+                True,
+                ", ".join(sorted(expected)),
+            )
+    except Exception as exc:
+        report.add("celery_worker_names", False, str(exc))
+
+
 def check_systemd_units(report: Report, units: List[str]) -> None:
     import subprocess
 
@@ -265,11 +314,12 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if args.with_workers:
         check_running_workers(report, args.worker_timeout)
+        check_expected_workers(report, args.worker_timeout)
 
     if args.systemd is not None:
         units = args.systemd or [
-            "amazon-spapi-offers-us.service",
-            "amazon-spapi-catalog-us.service",
+            "amazon-spapi-offers.service",
+            "amazon-spapi-catalog.service",
         ]
         check_systemd_units(report, units)
 

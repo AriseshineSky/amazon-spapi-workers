@@ -65,15 +65,25 @@ class RefreshMarketplaceCatalog:
 
         products_info = None
         spapi_start_ms = now_ms()
+        spapi_metrics = {}
         while True:
             try:
                 products_info = self.search_catalog_items(
-                    self.spapi, self.marketplace, self.asins
+                    self.spapi,
+                    self.marketplace,
+                    self.asins,
+                    metrics=spapi_metrics,
                 )
                 break
             except SellingApiForbiddenException as e:
                 raise e
-            except exceptions_to_retry:
+            except exceptions_to_retry as e:
+                from sp_api.base.exceptions import SellingApiRequestThrottledException
+
+                if isinstance(e, SellingApiRequestThrottledException):
+                    spapi_metrics["throttle_count"] = (
+                        spapi_metrics.get("throttle_count", 0) + 1
+                    )
                 time.sleep(3)
             except exceptions_not_retry:
                 break
@@ -105,6 +115,7 @@ class RefreshMarketplaceCatalog:
             task_duration_ms=task_duration_ms,
             spapi_duration_ms=spapi_duration_ms,
             api_failed=api_failed,
+            throttle_count=spapi_metrics.get("throttle_count", 0),
             fetch_gap_ms=fetch_gap_ms,
         )
 
@@ -169,5 +180,7 @@ class RefreshMarketplaceCatalog:
             logger.warning("[MissingASINSaveError] %s", missing_asins)
             logger.exception(e)
 
-    def search_catalog_items(self, spapi, marketplace, asins):
-        return search_and_parse_catalog_items(spapi, marketplace, asins)
+    def search_catalog_items(self, spapi, marketplace, asins, metrics=None):
+        return search_and_parse_catalog_items(
+            spapi, marketplace, asins, metrics=metrics
+        )

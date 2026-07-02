@@ -12,9 +12,9 @@
 ```
 deploy/install-ubuntu.sh              # Ubuntu 一键部署
 deploy/deploy.env.example             # 部署配置示例 → deploy/deploy.env
-deploy/systemd/amazon-spapi-offers-us.service
-deploy/systemd/amazon-spapi-catalog-us.service
-deploy/systemd/amazon-spapi.env.example
+deploy/systemd/amazon-spapi-offers.service
+deploy/systemd/amazon-spapi-catalog.service
+deploy/conf.d/celery_spapi.example
 ```
 
 ## 快速命令

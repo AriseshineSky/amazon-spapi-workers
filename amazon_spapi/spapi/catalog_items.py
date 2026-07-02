@@ -31,9 +31,13 @@ def catalog_included_data_csv() -> str:
     return ",".join(CATALOG_INCLUDED_DATA)
 
 
-def search_and_parse_catalog_items(client, marketplace: str, asins: List[str]):
+def search_and_parse_catalog_items(
+    client, marketplace: str, asins: List[str], metrics=None
+):
     """Call ``client.search_catalog_items`` and parse with ``SpapiCatalogItemsParser``."""
-    response = client.search_catalog_items(asins, marketplace=marketplace)
+    response = client.search_catalog_items(
+        asins, marketplace=marketplace, metrics=metrics
+    )
     if not response:
         return None
     return SpapiCatalogItemsParser.parse(response)

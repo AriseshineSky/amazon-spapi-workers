@@ -84,6 +84,7 @@ def empty_stats_bucket() -> Dict[str, int]:
         "task_duration_ms": 0,
         "spapi_duration_ms": 0,
         "api_failed": 0,
+        "throttle_count": 0,
         "spapi_success_duration_ms": 0,
         "spapi_success_count": 0,
         "fetch_gap_ms": 0,
@@ -142,6 +143,7 @@ class WorkerTaskStatsRecorder:
         task_duration_ms: int,
         spapi_duration_ms: int,
         api_failed: int = 0,
+        throttle_count: int = 0,
         fetch_gap_ms: int = 0,
     ) -> None:
         if not self.product_service:
@@ -167,6 +169,7 @@ class WorkerTaskStatsRecorder:
         stats["spapi_duration_ms"] += spapi_duration_ms
         stats["task_count"] += 1
         stats["api_failed"] += api_failed
+        stats["throttle_count"] += throttle_count
         stats["fetch_gap_ms"] += fetch_gap_ms
         stats["fetch_gap_count"] += 1
 
@@ -251,6 +254,7 @@ class WorkerTaskStatsRecorder:
             "successful_asins": stats["successful_asins"],
             "failed_asins": stats["failed_asins"],
             "api_failed": stats["api_failed"],
+            "throttle_count": stats["throttle_count"],
             "task_count": task_count,
             "task_duration_ms": stats["task_duration_ms"],
             "spapi_duration_ms": stats["spapi_duration_ms"],

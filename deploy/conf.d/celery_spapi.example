@@ -1,0 +1,27 @@
+# Amazon SP-API workers — 公用环境变量（systemd EnvironmentFile）
+# 复制: sudo cp deploy/conf.d/celery_spapi.example /etc/conf.d/celery_spapi
+#       sudo chmod 640 /etc/conf.d/celery_spapi && sudo chown root:Admin /etc/conf.d/celery_spapi
+#
+# 修改后: sudo systemctl daemon-reload && sudo systemctl restart amazon-spapi-offers amazon-spapi-catalog
+
+# ── 连接 ─────────────────────────────────────────────────────
+BROKER_URL=redis://:password@redis-host:6379/2
+AMAZON_SPAPI_CONFIG_PATH=/home/Admin/.amazon_spapi/config.ini
+
+# ── 报价 worker（amazon-spapi-offers.service）────────────────
+OFFERS_WORKER_NAME=c845us-offers
+OFFERS_CONCURRENCY=1
+OFFERS_MARKETPLACES=us,ca,mx
+OFFERS_QUEUES=SpapiItemOffersUpdate_US,SpapiItemOffersUpdate_CA,SpapiItemOffersUpdate_MX
+OFFERS_TASK_RATE=16/m
+
+# ── 目录 worker（amazon-spapi-catalog.service）───────────────
+CATALOG_WORKER_NAME=c845us-catalog
+CATALOG_CONCURRENCY=1
+CATALOG_MARKETPLACES=us,ca,mx
+CATALOG_QUEUES=SpapiCatalogItemsUpdate_US,SpapiCatalogItemsUpdate_CA,SpapiCatalogItemsUpdate_MX
+CATALOG_TASK_RATE=1/s
+
+# ── 其它 Celery 任务限速 ─────────────────────────────────────
+FETCH_PRODUCTS_TASK_RATE=6/m
+CELERY_LOG_LEVEL=info

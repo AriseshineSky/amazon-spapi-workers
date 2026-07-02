@@ -14,7 +14,7 @@ from amazon_spapi.worker.worker_deps import WorkerContext
 logger = get_task_logger(__name__)
 
 
-@app.task(base=WorkerContext, bind=True, acks_late=True, rate_limit="6/m")
+@app.task(base=WorkerContext, bind=True, acks_late=True)
 def fetch_products(self, marketplace, asins, condition="new"):
     use_case = FetchMarketplaceProducts(
         self.spapi,

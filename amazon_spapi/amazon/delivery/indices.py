@@ -108,6 +108,7 @@ def stats_index_settings() -> dict:
                 "failed_asins": {"type": "integer"},
                 "task_count": {"type": "integer"},
                 "api_failed": {"type": "integer"},
+                "throttle_count": {"type": "integer"},
                 "task_duration_ms": {"type": "long"},
                 "spapi_duration_ms": {"type": "long"},
                 "spapi_success_duration_ms": {"type": "long"},

@@ -1,0 +1,26 @@
+# Logrotate for amazon-spapi application logs (scheduler / enqueue scripts).
+# Installed to /etc/logrotate.d/amazon-spapi by deploy/install-logrotate.sh
+#
+# Celery worker stdout/stderr goes to journald — see deploy/journald/size-limit.conf
+
+@LOG_DIR@/*.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    su @DEPLOY_USER@ @DEPLOY_USER@
+}
+
+@LOG_DIR@/cron.log {
+    weekly
+    rotate 8
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    su @DEPLOY_USER@ @DEPLOY_USER@
+}

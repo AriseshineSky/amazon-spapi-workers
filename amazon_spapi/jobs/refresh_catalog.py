@@ -16,7 +16,7 @@ from amazon_spapi.worker.worker_meta import build_worker_meta
 logger = get_task_logger(__name__)
 
 
-@app.task(base=WorkerContext, bind=True, acks_late=True, rate_limit="1/s")
+@app.task(base=WorkerContext, bind=True, acks_late=True)
 def refresh_catalog(
     self,
     marketplace,
