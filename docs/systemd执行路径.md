@@ -154,7 +154,7 @@ app.config_from_object("amazon_spapi.worker.settings")
 | `broker_url` | `get_broker_url()` ← 环境变量 `BROKER_URL` | 连接 Redis |
 | `task_acks_late = True` | 固定 | 任务执行成功后才 ack；崩溃可重新入队 |
 | `task_reject_on_worker_lost = True` | 固定 | Worker 丢失时任务退回队列 |
-| `worker_prefetch_multiplier = 1` | 固定 | 每个子进程一次只预取 1 条任务，利于公平调度 |
+| `worker_prefetch_multiplier = 1` | 固定（**非** `celery_spapi` 环境变量） | 每个子进程最多预取 1 条未 ack 任务；全进程在手任务数 ≈ `-c` × 1。详见 [生产部署 — Prefetch](./生产部署.md#prefetch任务预取) |
 | `task_annotations` | `get_task_rate_limits()` ← `OFFERS_TASK_RATE` / `CATALOG_TASK_RATE` | **每子进程** API 调用频率上限 |
 
 `get_task_rate_limits()` 定义在 `amazon_spapi/config/workers.py`，从 `/etc/conf.d/celery_spapi` 读取，例如：

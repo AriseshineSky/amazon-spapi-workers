@@ -9,6 +9,7 @@ distinguishes sites. See ``docs/监控数据.md`` for index names and ``_id`` ru
 from __future__ import annotations
 
 import datetime
+import os
 import re
 import time
 from typing import Any, Dict, Optional
@@ -19,6 +20,10 @@ from amazon_spapi.log import logger
 # One index per job type; every marketplace lives in the same index.
 OFFERS_TASK_STATS_INDEX = "spapi_task_stats_offers"
 CATALOG_TASK_STATS_INDEX = "spapi_task_stats_catalog"
+
+DEFAULT_TASK_STATS_RETENTION_DAYS = 7
+TASK_STATS_PURGE_LOCK_KEY = "spapi:task_stats:purge_lock"
+TASK_STATS_PURGE_LOCK_SEC = 86400  # at most one purge attempt per day (cluster-wide)
 
 JOB_TYPE_OFFERS = "offers"
 JOB_TYPE_CATALOG = "catalog"
@@ -326,6 +331,115 @@ def ensure_worker_task_stats_indices(product_service) -> None:
         )
         return
     _worker_task_stats_indices_ready = True
+    maybe_purge_old_task_stats(product_service)
+
+
+def get_task_stats_retention_days() -> int:
+    """How long to keep minute-level task stats docs in ES (default 7)."""
+    raw = os.getenv("SPAPI_TASK_STATS_RETENTION_DAYS", "").strip()
+    if not raw:
+        return DEFAULT_TASK_STATS_RETENTION_DAYS
+    try:
+        days = int(raw)
+    except ValueError:
+        return DEFAULT_TASK_STATS_RETENTION_DAYS
+    return max(days, 0)
+
+
+def purge_cutoff_minute(retention_days: int) -> datetime.datetime:
+    cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
+        days=retention_days
+    )
+    return cutoff.replace(second=0, microsecond=0)
+
+
+def purge_old_task_stats(product_service, *, retention_days: Optional[int] = None) -> int:
+    """
+    Delete task-stats documents older than ``retention_days`` from both indices.
+
+    Returns total documents deleted (best effort; 0 if disabled or ES unavailable).
+    """
+    if product_service is None:
+        return 0
+
+    days = retention_days if retention_days is not None else get_task_stats_retention_days()
+    if days <= 0:
+        return 0
+
+    cutoff_iso = format_minute_bucket(purge_cutoff_minute(days))
+    body = {
+        "query": {
+            "range": {
+                "minute": {
+                    "lt": cutoff_iso,
+                    "format": "strict_date_optional_time",
+                }
+            }
+        }
+    }
+
+    deleted = 0
+    for index_name in TASK_STATS_INDICES:
+        try:
+            if not product_service.index_exists(index_name):
+                continue
+            resp = product_service.esclient.delete_by_query(
+                index=index_name,
+                body=body,
+                conflicts="proceed",
+                wait_for_completion=True,
+                request_timeout=120,
+            )
+            removed = int(resp.get("deleted") or 0)
+            deleted += removed
+            if removed:
+                logger.info(
+                    "[TaskStatsPurge] index=%s deleted=%s older_than=%s",
+                    index_name,
+                    removed,
+                    cutoff_iso,
+                )
+        except Exception:
+            logger.exception(
+                "[TaskStatsPurge] failed index=%s older_than=%s",
+                index_name,
+                cutoff_iso,
+            )
+    return deleted
+
+
+def _acquire_task_stats_purge_lock() -> bool:
+    """One purge per day cluster-wide (Redis SET NX on broker)."""
+    try:
+        import redis
+        from amazon_spapi.config.env import get_broker_url
+        from amazon_spapi.scheduling.dedup import broker_url_to_dedup_redis_url
+
+        client = redis.from_url(
+            broker_url_to_dedup_redis_url(get_broker_url(), db=0),
+            socket_connect_timeout=2,
+            socket_timeout=2,
+        )
+        return bool(
+            client.set(
+                TASK_STATS_PURGE_LOCK_KEY,
+                b"1",
+                nx=True,
+                ex=TASK_STATS_PURGE_LOCK_SEC,
+            )
+        )
+    except Exception:
+        logger.debug("[TaskStatsPurge] lock unavailable; skipping scheduled purge")
+        return False
+
+
+def maybe_purge_old_task_stats(product_service) -> None:
+    """Run retention purge when a worker starts, at most once per day cluster-wide."""
+    if get_task_stats_retention_days() <= 0:
+        return
+    if not _acquire_task_stats_purge_lock():
+        return
+    purge_old_task_stats(product_service)
 
 
 def ensure_item_offers_aux_indices(product_service) -> None:

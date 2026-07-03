@@ -25,3 +25,6 @@ CATALOG_TASK_RATE=1/s
 # ── 其它 Celery 任务限速 ─────────────────────────────────────
 FETCH_PRODUCTS_TASK_RATE=6/m
 CELERY_LOG_LEVEL=info
+
+# ── 监控 ES 保留（spapi_task_stats_offers / catalog，默认 7 天）──
+# SPAPI_TASK_STATS_RETENTION_DAYS=7
