@@ -9,6 +9,7 @@ import os
 
 import click
 
+from amazon_spapi.amazon.listing_rules.stale_offers import filter_stale_offer_asins
 from amazon_spapi.amazon.offers.schedule_stale import StaleOfferEnqueueService
 from amazon_spapi.config.env import get_broker_url
 from amazon_spapi.config.paths import DEFAULT_LOG_DIR
@@ -57,6 +58,20 @@ def _marketplace_from_source(source: str) -> str:
 )
 @click.option("-c", "--condition", default="new", show_default=True)
 @click.option(
+    "-t",
+    "--ttl",
+    type=int,
+    default=36,
+    show_default=True,
+    help="Offer freshness window (hours); only expired ASINs are enqueued.",
+)
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    help="Skip TTL check and enqueue every ASIN from the file.",
+)
+@click.option(
     "-p",
     "--priority",
     type=int,
@@ -100,6 +115,8 @@ def main(
     marketplace,
     source,
     condition,
+    ttl,
+    force,
     priority,
     qps,
     limit,
@@ -129,12 +146,32 @@ def main(
         asins = collect_asins_from_file(
             asins_path, source_filter=source_filter, limit=limit
         )
+        offer_service = get_offer_service()
+        if force:
+            stale_asins = asins
+        else:
+            stale_asins = filter_stale_offer_asins(
+                offer_service,
+                "lowest_offer_listings",
+                asins,
+                marketplace,
+                condition,
+                ttl,
+                force=False,
+            )
+        index_name = "lowest_offer_listings_{}_{}".format(
+            marketplace, condition if condition == "new" else "any"
+        )
         print(f"file: {asins_path}")
         print(f"marketplace: {marketplace}")
+        print(f"offer index: {index_name}")
+        print(f"ttl: {ttl}h force: {force}")
         print(f"priority: {priority} -> {redis_queue_key}")
-        print(f"unique asins: {len(asins)}")
-        if asins:
-            print(f"sample: {', '.join(asins[:5])}")
+        print(f"parsed asins: {len(asins)}")
+        print(f"would enqueue (stale/missing): {len(stale_asins)}")
+        print(f"skip (still fresh): {len(asins) - len(stale_asins)}")
+        if stale_asins:
+            print(f"sample enqueue: {', '.join(stale_asins[:5])}")
         return
 
     _setup_log("enqueue_offers_from_file.log")
@@ -155,8 +192,8 @@ def main(
         offer_service=get_offer_service(),
         refresh_task=refresh_offers,
         qps=qps,
-        ttl_hours=0,
-        force=True,
+        ttl_hours=ttl,
+        force=force,
         priority=priority,
         dedup_redis_client=dedup_client,
         dedup_ttl_sec=dedup_ttl_sec,
@@ -177,16 +214,18 @@ def main(
         total_enqueued += scheduler.enqueue_asins(batch)
 
     logger.info(
-        "Enqueued %d ASINs from %d parsed (%s priority=%d queue=%s)",
+        "Enqueued %d ASINs from %d parsed (%s ttl=%dh force=%s priority=%d queue=%s)",
         total_enqueued,
         total_read,
         marketplace,
+        ttl,
+        force,
         priority,
         redis_queue_key,
     )
     print(
         f"Enqueued {total_enqueued} ASINs to {redis_queue_key} "
-        f"({total_read} parsed from file)"
+        f"({total_read} parsed; ttl={ttl}h, force={force})"
     )
 
 
