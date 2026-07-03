@@ -5,6 +5,7 @@ from amazon_spapi.config.env import get_broker_url
 from amazon_spapi.config.workers import get_task_rate_limits
 from amazon_spapi.scheduling.priority import (
     PRIORITY_NORMAL,
+    REDIS_BROKER_CONSUME_ORDER,
     user_to_broker_priority,
 )
 
@@ -20,7 +21,7 @@ task_queue_max_priority = 9
 broker_url = get_broker_url()
 
 broker_transport_options = {
-    "priority_steps": list(range(10)),
+    "priority_steps": REDIS_BROKER_CONSUME_ORDER,
     "sep": ":",
     "queue_order_strategy": "priority",
 }

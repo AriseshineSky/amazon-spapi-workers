@@ -3,9 +3,13 @@
 
 User-facing API: 0–9 where **9 = highest** (critical), **0 = lowest** (bulk).
 
-Redis transport (Kombu): **0 = highest**, **9 = lowest** — the main queue name
-(without suffix) holds priority-0 broker messages. ``dispatch_task`` converts
-between the two conventions.
+Broker priority uses the **same numbers** as user priority:
+
+- ``-p 9`` → Redis list ``SpapiItemOffersUpdate_US:9`` (highest)
+- ``-p 5`` → ``...:5`` (normal)
+- ``-p 0`` → ``SpapiItemOffersUpdate_US`` without suffix (lowest)
+
+Workers consume sub-queues in ``REDIS_BROKER_CONSUME_ORDER`` (9 first, 0 last).
 """
 
 PRIORITY_BULK = 0
@@ -28,6 +32,8 @@ PRIORITY_NAMES = {
 # Must match ``broker_transport_options['sep']`` in worker settings.
 REDIS_PRIORITY_SEP = ":"
 REDIS_PRIORITY_STEPS = list(range(10))
+# Kombu BRPOP order: check :9 before :8 … before the no-suffix queue.
+REDIS_BROKER_CONSUME_ORDER = list(range(9, -1, -1))
 
 
 def normalize_user_priority(priority):
@@ -42,9 +48,8 @@ def normalize_user_priority(priority):
 
 
 def user_to_broker_priority(priority):
-    """Map user priority (9=highest) to Redis broker priority (0=highest)."""
-    user = normalize_user_priority(priority)
-    return PRIORITY_MAX - user
+    """Map user priority to Redis broker priority (same number, 9 = :9)."""
+    return normalize_user_priority(priority)
 
 
 def broker_to_user_priority(priority):
@@ -54,7 +59,7 @@ def broker_to_user_priority(priority):
     except (TypeError, ValueError):
         return PRIORITY_NORMAL
     broker = max(PRIORITY_MIN, min(PRIORITY_MAX, broker))
-    return PRIORITY_MAX - broker
+    return broker
 
 
 def iter_redis_priority_queue_keys(
@@ -62,8 +67,12 @@ def iter_redis_priority_queue_keys(
     sep=REDIS_PRIORITY_SEP,
     priority_steps=None,
 ):
-    """Yield Redis list keys for all priority sub-queues of a Celery queue."""
-    steps = REDIS_PRIORITY_STEPS if priority_steps is None else priority_steps
+    """Yield Redis list keys for all priority sub-queues (highest suffix first)."""
+    steps = (
+        REDIS_BROKER_CONSUME_ORDER
+        if priority_steps is None
+        else priority_steps
+    )
     for step in steps:
         if step == 0:
             yield queue_name
