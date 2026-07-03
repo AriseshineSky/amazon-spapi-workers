@@ -19,6 +19,7 @@ dependencies = [
 
 [project.scripts]
 schedule-stale-offers = "amazon_spapi.commands.amazon.schedule_stale_offers:main"
+enqueue-offers-from-file = "amazon_spapi.commands.amazon.enqueue_offers_from_file:main"
 amazon-spapi-check = "amazon_spapi.commands.check_server:main"
 amazon-spapi-test-auth = "amazon_spapi.commands.test_spapi_auth:main"
 
