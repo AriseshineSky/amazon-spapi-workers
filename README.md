@@ -9,6 +9,7 @@ Amazon SP-API 后台作业：报价刷新、目录同步、商品下载。
 | [docs/业务说明.md](docs/业务说明.md) | 系统做什么、业务流程（业务语言） |
 | [docs/生产部署.md](docs/生产部署.md) | 生产环境 systemd 部署与运维 |
 | [docs/监控数据.md](docs/监控数据.md) | Worker 监控 ES 索引、`_id` 规则、查询示例 |
+| [docs/systemd执行路径.md](docs/systemd执行路径.md) | offers/catalog systemd 服务逐步代码路径 |
 | [docs/公开仓库.md](docs/公开仓库.md) | 公开仓库说明、敏感信息约定 |
 | [docs/DEPLOY.md](docs/DEPLOY.md) | 文档索引与快速命令 |
 
