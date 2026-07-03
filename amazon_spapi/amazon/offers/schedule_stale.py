@@ -12,6 +12,7 @@ from amazon_spapi.amazon.listing_rules.stale_offers import (
 from amazon_spapi.log import logger
 from amazon_spapi.scheduling.backpressure import should_pause_enqueue
 from amazon_spapi.scheduling.dedup import claim_asins_for_enqueue
+from amazon_spapi.scheduling.kombu_priority_patch import broker_transport_options
 from amazon_spapi.scheduling.send import (
     PRIORITY_NORMAL,
     dispatch_task,
@@ -54,7 +55,9 @@ class StaleOfferEnqueueService:
         self.max_queue_depth = max_queue_depth
         self.dedup_redis_client = dedup_redis_client
         self.dedup_ttl_sec = dedup_ttl_sec
-        self.connection = Connection(broker_url)
+        self.connection = Connection(
+            broker_url, transport_options=broker_transport_options()
+        )
         self.queue = marketplace_offers_queue(marketplace)
         self._redis = redis.Redis.from_url(broker_url)
         self._last_send_time = None

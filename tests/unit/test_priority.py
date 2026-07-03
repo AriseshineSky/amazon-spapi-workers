@@ -61,6 +61,13 @@ def test_broker_consume_order_checks_nine_first():
     assert REDIS_BROKER_CONSUME_ORDER[-1] == 0
 
 
+def test_broker_transport_options_use_ascending_steps():
+    from amazon_spapi.scheduling.kombu_priority_patch import broker_transport_options
+
+    opts = broker_transport_options()
+    assert opts["priority_steps"] == list(range(10))
+
+
 if __name__ == "__main__":
     test_user_priority_9_maps_to_broker_9()
     test_user_priority_0_maps_to_broker_0()

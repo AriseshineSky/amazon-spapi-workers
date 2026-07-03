@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Dispatch work items to the Celery broker with normalized priority."""
 
+import amazon_spapi.scheduling.kombu_priority_patch  # noqa: F401
+
 from amazon_spapi.scheduling.priority import (
     PRIORITY_BULK,
     PRIORITY_CRITICAL,

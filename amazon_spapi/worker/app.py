@@ -3,6 +3,8 @@
 
 from __future__ import absolute_import
 
+import amazon_spapi.scheduling.kombu_priority_patch  # noqa: F401
+
 from celery import Celery
 from celery.signals import worker_process_init
 from celery.utils.log import get_logger

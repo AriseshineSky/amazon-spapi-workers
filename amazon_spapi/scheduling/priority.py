@@ -9,7 +9,8 @@ Broker priority uses the **same numbers** as user priority:
 - ``-p 5`` → ``...:5`` (normal)
 - ``-p 0`` → ``SpapiItemOffersUpdate_US`` without suffix (lowest)
 
-Workers consume sub-queues in ``REDIS_BROKER_CONSUME_ORDER`` (9 first, 0 last).
+Workers consume sub-queues highest-suffix-first via ``kombu_priority_patch``
+(``priority_steps`` stays ascending so LPUSH targets ``:9`` correctly).
 """
 
 PRIORITY_BULK = 0
@@ -32,7 +33,6 @@ PRIORITY_NAMES = {
 # Must match ``broker_transport_options['sep']`` in worker settings.
 REDIS_PRIORITY_SEP = ":"
 REDIS_PRIORITY_STEPS = list(range(10))
-# Kombu BRPOP order: check :9 before :8 … before the no-suffix queue.
 REDIS_BROKER_CONSUME_ORDER = list(range(9, -1, -1))
 
 
